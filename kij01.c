@@ -19,13 +19,36 @@ char user[100][16];
 int cek_IP(char *msg) {
     //printf(">> %s, %s <<", msg, user[1]);
     int i;
-    for (i=0; i<100; i++) {
+    for (i=4; i<100; i++) {
         if (strcmp(user[i], msg) == 0) {
-            printf("%i\n", i);
+            //printf("%i\n", i);
             return i;
         }
     }
     return -1;
+}
+
+void send_who(int dest) {
+    int i;
+    char temp[128];
+    bzero(temp, 128);
+    strcpy(temp, "LIST\r\n");
+    write(dest, temp, strlen(temp));
+    fflush(stdout);
+    for (i=4; i<100; i++) {
+        if (strcmp(user[i], "") == 0) {
+            break;
+        } else {
+            strcpy(temp, user[i]);
+            strcat(temp, "\r\n");
+            write(dest, temp, strlen(temp));
+            fflush(stdout);
+        }
+    }
+    strcpy(temp, "END\r\n");
+    write(dest, temp, strlen(temp));
+    fflush(stdout);
+    return;
 }
 
 void *acc(void *ptr) {
@@ -40,9 +63,9 @@ void *acc(void *ptr) {
     /* here */
     
     
-    //char msg[20] ="Selamat datang kawan";
-    //retval = write(handler->sockcli,msg,strlen(msg));
-    //printf("selesai kirim pesan\n");
+    strcpy(msg_send, "WELCOME :)\r\n");
+    write(handler->sockcli, msg_send, strlen(msg_send));
+    fflush(stdout);
     
     while(1) {
         bzero(msg, 255);
@@ -66,13 +89,14 @@ void *acc(void *ptr) {
         //printf("%s", msg);
         
         if (strstr(msg, "USER") != NULL) {
-            sscanf(msg, "USER %s %s", comment, msg_send);
+            sscanf(msg, "USER %s %[^\r\n]", comment, msg_send);
             if (strcmp(comment, "") == 0) {
                 sprintf(msg_send, "IP?\r\n");
             } else {
                 dest = cek_IP(comment);
                 if (dest > -1) {
                     //printf("%d", dest);
+                    strcat(msg_send, "\r\n");
                     write(dest, msg_send, strlen(msg_send));
                     fflush(stdout);
                     bzero(msg_send, 4096);
@@ -80,6 +104,11 @@ void *acc(void *ptr) {
                     sprintf(msg_send, "USER with IP = %s not found\r\n", comment);
                 }
             }
+        }
+        
+        else if (strstr(msg, "WHO?") != NULL) {
+             send_who(handler->sockcli);
+             bzero(msg_send, 4096);
         }
         
         write(handler->sockcli, msg_send, strlen(msg_send));
