@@ -9,11 +9,94 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+struct user {
+    int sockcli;
+    char ip_active[16];
+    char username[128];
+    struct user *next;
+};
+
+struct user *awal, *baru, *temp, *temp2;
+
+void push(int cli, char *ip, char *name) {
+    baru = (struct user*) malloc (sizeof(struct user));
+    baru->sockcli = cli;
+    strcpy(baru->ip_active, ip);
+    strcpy(baru->username, name);
+    baru->next = NULL;
+    
+    if (awal == NULL) {
+        awal = baru;
+    } else {
+        temp = awal;
+        while (temp->next != NULL) {
+            temp = temp->next;
+        }
+        temp->next = baru;
+    }
+    return;
+}
+
+void pop(int cli) {
+    temp = awal;
+    temp2 = awal->next;
+    if (temp->sockcli == cli) {
+        awal = temp2;
+    } else {
+        do {
+            if (temp2->sockcli = cli) {
+                temp->next = temp2->next;
+                free(temp2);
+            } else {
+                temp = temp->next;
+                temp2 = temp2->next;
+            }
+        } while (temp2->next != NULL);
+    }
+    return;
+}
+
+int cek_IP(char *msg) {
+     temp = awal;
+     do {
+         if (strcmp(temp->ip_active, msg) == 0) {
+             return temp->sockcli;
+         }
+     } while (temp->next != NULL);
+     return -1;
+}
+
+void send_who(int dest) {
+    char msg_temp[128];
+    bzero(msg_temp, 128);
+    strcpy(msg_temp, "LIST\r\n");
+    write(dest, msg_temp, strlen(msg_temp));
+    fflush(stdout);
+    
+    temp = awal;
+    do {
+        strcpy(msg_temp, temp->ip_active);
+        strcat(msg_temp, "\r\n");
+        write(dest, msg_temp, strlen(msg_temp));
+        fflush(stdout);
+        if (temp->next != NULL) {
+            temp = temp->next;
+        } else {
+            break;
+        }
+    } while (1);
+    strcpy(msg_temp, "END\r\n");
+    write(dest, msg_temp, strlen(msg_temp));
+    fflush(stdout);
+    return;
+}
+
 typedef struct haha {
     int sockcli;
     char ip_active[16];
 } haha;
 
+/*
 char user[100][16];
 
 int cek_IP(char *msg) {
@@ -50,8 +133,9 @@ void send_who(int dest) {
     fflush(stdout);
     return;
 }
+*/
 
-void *acc(void *ptr) {
+void *acc(void *ptr) {    
     haha * handler = (haha *)ptr;
     
     printf("%d", handler->sockcli);
@@ -96,10 +180,16 @@ void *acc(void *ptr) {
                 dest = cek_IP(comment);
                 if (dest > -1) {
                     //printf("%d", dest);
-                    strcat(msg_send, "\r\n");
-                    write(dest, msg_send, strlen(msg_send));
-                    fflush(stdout);
-                    bzero(msg_send, 4096);
+                    if (strcmp(msg_send, "") != 0) {
+                        char msg_temp[255];
+                        strcpy(msg_temp, handler->ip_active);
+                        strcat(msg_temp, ": ");
+                        strcat(msg_send, "\r\n");
+                        write(dest, msg_temp, strlen(msg_temp));
+                        write(dest, msg_send, strlen(msg_send));
+                        fflush(stdout);
+                        bzero(msg_send, 4096);
+                    }
                 } else {
                     sprintf(msg_send, "USER with IP = %s not found\r\n", comment);
                 }
@@ -109,6 +199,14 @@ void *acc(void *ptr) {
         else if (strstr(msg, "WHO?") != NULL) {
              send_who(handler->sockcli);
              bzero(msg_send, 4096);
+        }
+        
+        else if (strstr(msg, "OUT.") != NULL) {
+             strcpy(msg_send, "BYE. :)");
+             write(handler->sockcli, msg_send, strlen(msg_send));
+             fflush(stdout);
+             pop(handler->sockcli);
+             break;
         }
         
         write(handler->sockcli, msg_send, strlen(msg_send));
@@ -122,6 +220,8 @@ void *acc(void *ptr) {
 
 void main()
 {
+     awal = NULL;
+     
      int sockfd = 0, sockcli = 0;
      int retval;
      struct sockaddr_in servaddr, cliaddr;
@@ -165,9 +265,11 @@ void main()
 	    printf("sockcli --> %d\n", sockcli);
 	    printf("Ada klien masuk dari %s %d\n", inet_ntoa(cliaddr.sin_addr), (int) ntohs(cliaddr.sin_port));
 	    
-	    strcpy(user[sockcli], inet_ntoa(cliaddr.sin_addr));
+	    //strcpy(user[sockcli], inet_ntoa(cliaddr.sin_addr));
 	    
 	    //printf("%d %s\n", sockcli, user[sockcli]);
+	    
+	    push(sockcli, inet_ntoa(cliaddr.sin_addr), "anonymous");
 	    
 	    char str[INET_ADDRSTRLEN];
 	    inet_ntop(AF_INET, &(cliaddr.sin_addr), str, INET_ADDRSTRLEN);
