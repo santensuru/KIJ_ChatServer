@@ -42,6 +42,7 @@ void pop(int cli) {
     temp2 = awal->next;
     if (temp->sockcli == cli) {
         awal = temp2;
+        free(temp);
     } else {
         do {
             if (temp2->sockcli = cli) {
@@ -85,7 +86,7 @@ void send_who(int dest) {
             break;
         }
     } while (1);
-    strcpy(msg_temp, "END\r\n");
+    strcpy(msg_temp, "END.\r\n");
     write(dest, msg_temp, strlen(msg_temp));
     fflush(stdout);
     return;
