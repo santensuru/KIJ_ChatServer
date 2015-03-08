@@ -259,6 +259,8 @@ void *acc(void *ptr) {
     
     close(handler->sockcli);
     
+    broadcast_IP();
+    
     return;
 }
 
