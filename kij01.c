@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-int lastcli = -1;
+//int lastcli = -1;
 
 struct user {
     int sockcli;
@@ -18,10 +18,10 @@ struct user {
     struct user *next;
 };
 
-struct user *awal, *baru, *temp, *temp2;
+struct user *awal;
 
 void push(int cli, char *ip, char *name) {
-    baru = (struct user*) malloc (sizeof(struct user));
+    struct user *baru = (struct user*) malloc (sizeof(struct user));
     baru->sockcli = cli;
     strcpy(baru->ip_active, ip);
     strcpy(baru->username, name);
@@ -30,7 +30,7 @@ void push(int cli, char *ip, char *name) {
     if (awal == NULL) {
         awal = baru;
     } else {
-        temp = awal;
+        struct user *temp = awal;
         while (temp->next != NULL) {
             temp = temp->next;
         }
@@ -40,8 +40,8 @@ void push(int cli, char *ip, char *name) {
 }
 
 void pop(int cli) {
-    temp = awal;
-    temp2 = awal->next;
+    struct user *temp = awal;
+    struct user *temp2 = awal->next;
     if (temp->sockcli == cli) {
         awal = temp2;
         free(temp);
@@ -60,7 +60,7 @@ void pop(int cli) {
 }
 
 int cek_IP(char *msg) {
-    temp = awal;
+    struct user *temp = awal;
     do {
        if (strcmp(temp->ip_active, msg) == 0) {
            return temp->sockcli;
@@ -77,7 +77,7 @@ void send_who(int dest) {
     write(dest, msg_temp, strlen(msg_temp));
     fflush(stdout);
     
-    temp = awal;
+    struct user *temp = awal;
     do {
         strcpy(msg_temp, temp->ip_active);
         strcat(msg_temp, "\r\n");
@@ -98,8 +98,9 @@ typedef struct haha {
 } haha;
 
 void *broadcast(void *ptr) {
-    haha * handler = (haha *)ptr;
+    haha *handler = (haha *)ptr;
     send_who(handler->sockcli);
+    return;
 }
 
 void broadcast_IP() {
@@ -116,6 +117,7 @@ void broadcast_IP() {
     
     haha *handler = (haha *) malloc( sizeof ( haha ) );
     
+    /*
     int i;
     for (i = 4; i <= lastcli; i++) {
         handler->sockcli = i;
@@ -127,6 +129,23 @@ void broadcast_IP() {
         
         pthread_join(broadcast_t, &join);
     }
+    */
+    
+    struct user *temp = awal;
+    while (temp != NULL) {
+        handler->sockcli = temp->sockcli;
+        
+        pthread_mutex_lock( &broadcast_m );
+        
+        broadcast_i = pthread_create( &broadcast_t, &attr, broadcast, (void *)handler);
+        
+        pthread_mutex_unlock( &broadcast_m );
+        
+        pthread_join(broadcast_t, &join);
+        
+        temp = temp->next;
+    }
+    return;
 }
 
 /*
@@ -317,8 +336,10 @@ void main()
         
         push(sockcli, inet_ntoa(cliaddr.sin_addr), "anonymous");
         
+        /*
         if (lastcli < sockcli)
             lastcli = sockcli;
+        */
         
         char str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &(cliaddr.sin_addr), str, INET_ADDRSTRLEN);
