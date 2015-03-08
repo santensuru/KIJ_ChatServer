@@ -59,10 +59,34 @@ void pop(int cli) {
     return;
 }
 
+void set_name(int cli, char *name) {
+    struct user *temp = awal;
+    do {
+       if (temp->sockcli == cli) {
+           strcpy(temp->username, name);
+       }
+       temp = temp->next;
+    } while (temp != NULL);
+    return;
+}
+
+/*
 int cek_IP(char *msg) {
     struct user *temp = awal;
     do {
        if (strcmp(temp->ip_active, msg) == 0) {
+           return temp->sockcli;
+       }
+       temp = temp->next;
+    } while (temp != NULL);
+    return -1;
+}
+*/
+
+int cek_user(char *msg) {
+    struct user *temp = awal;
+    do {
+       if (strcmp(temp->username, msg) == 0) {
            return temp->sockcli;
        }
        temp = temp->next;
@@ -79,7 +103,8 @@ void send_who(int dest) {
     
     struct user *temp = awal;
     do {
-        strcpy(msg_temp, temp->ip_active);
+        //strcpy(msg_temp, temp->ip_active);
+        strcpy(msg_temp, temp->username);
         strcat(msg_temp, "\r\n");
         write(dest, msg_temp, strlen(msg_temp));
         fflush(stdout);
@@ -95,6 +120,7 @@ void send_who(int dest) {
 typedef struct haha {
     int sockcli;
     char ip_active[16];
+    char username[128];
 } haha;
 
 void *broadcast(void *ptr) {
@@ -202,7 +228,7 @@ void *acc(void *ptr) {
     write(handler->sockcli, msg_send, strlen(msg_send));
     fflush(stdout);
     
-    broadcast_IP();
+    
     
     while(1) {
         bzero(msg, 255);
@@ -225,18 +251,24 @@ void *acc(void *ptr) {
         
         //printf("%s", msg);
         
-        if (strstr(msg, "USER") != NULL) {
+        if (strstr(msg, "NAME") != NULL) {
+            sscanf(msg, "NAME %s", comment);
+            strcpy(handler->username, comment);
+            set_name(handler->sockcli, handler->username);
+            broadcast_IP();
+
+        } else if (strstr(msg, "USER") != NULL) {
             sscanf(msg, "USER %s %[^\r\n]", comment, msg_send);
             if (strcmp(comment, "") == 0) {
-                sprintf(msg_send, "IP?\r\n");
+                sprintf(msg_send, "NAME ?\r\n");
                 
             } else {
-                dest = cek_IP(comment);
+                dest = cek_user(comment);
                 if (dest > -1) {
                     //printf("%d", dest);
                     if (strcmp(msg_send, "") != 0) {
                         char msg_temp[255];
-                        strcpy(msg_temp, handler->ip_active);
+                        strcpy(msg_temp, handler->username);
                         strcat(msg_temp, ": ");
                         strcat(msg_send, "\r\n");
                         write(dest, msg_temp, strlen(msg_temp));
@@ -246,12 +278,12 @@ void *acc(void *ptr) {
                         strcpy(msg_send, "SEND\r\n");
                         
                     } else {
-                        sprintf(msg_send, "USER message for IP = %s ?\r\n", comment);
+                        sprintf(msg_send, "USER message for NAME = %s ?\r\n", comment);
                     
                     }
                     
                 } else {
-                    sprintf(msg_send, "USER with IP = %s not found\r\n", comment);
+                    sprintf(msg_send, "USER with NAME = %s not found\r\n", comment);
                     
                 }
             }
