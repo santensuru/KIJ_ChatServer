@@ -142,7 +142,7 @@ void broadcast_IP() {
 
 void *acc(void *ptr) {
     char version[128];
-    strcpy(version, "0.0.1a beta");
+    strcpy(version, "0.0.1b beta");
 
     haha * handler = (haha *)ptr;
     
@@ -204,12 +204,12 @@ void *acc(void *ptr) {
                         strcpy(msg_send, "<SEND>\r\n");
                         
                     } else {
-                        sprintf(msg_send, "<REPL>-Message for NAME = %s ?\r\n", msg_temp);
+                        sprintf(msg_send, "<REPL>-Message for NAME = %s ?\r\n", comment);
                     
                     }
                     
                 } else {
-                    sprintf(msg_send, "<REPL>-User with NAME = %s not found\r\n", msg_temp);
+                    sprintf(msg_send, "<REPL>-User with NAME = %s not found\r\n", comment);
                     
                 }
             }
@@ -226,7 +226,7 @@ void *acc(void *ptr) {
             break;
             
         } else {
-            strcpy(msg_send, "<???.>-@x@ Commend not recognized....\r\n");
+            strcpy(msg_send, "<???.>-@x@ Command not recognized....\r\n");
         
         }
         
