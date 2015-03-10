@@ -93,7 +93,6 @@ void send_who(int dest) {
     
     strcat(msg_temp, "\r\n");
     write(dest, msg_temp, strlen(msg_temp));
-    printf("%s", msg_temp);
     fflush(stdout);
     return;
 }
@@ -143,14 +142,14 @@ void broadcast_IP() {
 
 void *acc(void *ptr) {
     char version[128];
-    strcpy(version, "0.0.1 beta");
+    strcpy(version, "0.0.1a beta");
 
     haha * handler = (haha *)ptr;
     
     printf("%d", handler->sockcli);
     int retval = 0;
     
-    char buf[2], msg[4096], comment[4096], msg_send[4096];
+    char buf[2], msg[4096], comment[4096], msg_temp[4096], msg_send[4096];
     int dest = -1;
     
     /* here */
@@ -190,10 +189,11 @@ void *acc(void *ptr) {
                 sprintf(msg_send, "<REPL>-?\r\n");
                 
             } else {
+                sscanf(comment, "%s", msg_temp);
+                strcpy(comment, msg_temp);
                 dest = cek_user(comment);
                 if (dest > -1) {
                     if (strcmp(msg_send, "") != 0) {
-                        char msg_temp[4096];
                         strcpy(msg_temp, "<FROM>-");
                         strcat(msg_temp, handler->username);
                         strcat(msg_temp, "-");
@@ -204,12 +204,12 @@ void *acc(void *ptr) {
                         strcpy(msg_send, "<SEND>\r\n");
                         
                     } else {
-                        sprintf(msg_send, "<REPL>-Message for NAME = %s ?\r\n", comment);
+                        sprintf(msg_send, "<REPL>-Message for NAME = %s ?\r\n", msg_temp);
                     
                     }
                     
                 } else {
-                    sprintf(msg_send, "<REPL>-User with NAME = %s not found\r\n", comment);
+                    sprintf(msg_send, "<REPL>-User with NAME = %s not found\r\n", msg_temp);
                     
                 }
             }
@@ -226,7 +226,7 @@ void *acc(void *ptr) {
             break;
             
         } else {
-            strcpy(msg_send, "<???.> @x@ >> Commend not recognized.... <<\r\n");
+            strcpy(msg_send, "<???.>-@x@ Commend not recognized....\r\n");
         
         }
         
