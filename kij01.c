@@ -99,7 +99,6 @@ void send_who(int dest) {
 
 typedef struct haha {
     int sockcli;
-    char ip_active[16];
     char username[128];
 } haha;
 
@@ -142,7 +141,7 @@ void broadcast_IP() {
 
 void *acc(void *ptr) {
     char version[128];
-    strcpy(version, "0.0.1b beta");
+    strcpy(version, "0.0.1c beta");
 
     haha * handler = (haha *)ptr;
     
@@ -251,6 +250,9 @@ void main()
     
     sockfd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     
+    int opt = 1;
+    setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt));
+    
     bzero(&servaddr, sizeof(servaddr));
     
     servaddr.sin_family = AF_INET;
@@ -272,8 +274,6 @@ void main()
     socklen_t clisize = sizeof(cliaddr);
     
     // thread acc //
-    void *join;
-    
     pthread_t acc_t;
     int acc_i;
     pthread_mutex_t acc_m = PTHREAD_MUTEX_INITIALIZER;
@@ -314,7 +314,7 @@ void main()
         
         handler->sockcli = sockcli;
         printf("%d\n", handler->sockcli);
-        strcpy(handler->ip_active, ip_active);
+        strcpy(handler->username, "anonymous");
         
         pthread_mutex_lock( &acc_m );
         
