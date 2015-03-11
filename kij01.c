@@ -69,18 +69,22 @@ int cek_user(char *msg) {
 }
 
 void send_who(int dest) {
-    char msg_temp[4096];
-    bzero(msg_temp, 4096);
+    char msg_temp[128];
+    bzero(msg_temp, 128);
     strcpy(msg_temp, "<LIST>");
+    write(dest, msg_temp, strlen(msg_temp));
+    fflush(stdout);
     
     struct user *temp = awal;
     do {
-        strcat(msg_temp, "-");
+        strcpy(msg_temp, "-");
         strcat(msg_temp, temp->data->username);
+        write(dest, msg_temp, strlen(msg_temp));
+        fflush(stdout);
         temp = temp->next;
     } while (temp != NULL);
     
-    strcat(msg_temp, "\r\n");
+    strcpy(msg_temp, "\r\n");
     write(dest, msg_temp, strlen(msg_temp));
     fflush(stdout);
     return;
@@ -125,14 +129,14 @@ void broadcast_IP() {
 
 void *acc(void *ptr) {
     char version[128];
-    strcpy(version, "0.0.1d beta");
+    strcpy(version, "0.0.1e beta");
 
     haha *handler = (haha *)ptr;
     
     printf("%d", handler->sockcli);
     int retval = 0;
     
-    char buf[2], msg[4096], comment[4096], msg_temp[4096], msg_send[4096];
+    char buf[2], msg[4096], command[128], msg_temp[4096], msg_send[4096];
     int dest = -1;
     
     /* here */
@@ -143,7 +147,7 @@ void *acc(void *ptr) {
     
     while(1) {
         bzero(msg, 4096);
-        bzero(comment, 4096);
+        bzero(command, 128);
         bzero(msg_send, 4096);
         do {
             fflush(stdin);
@@ -161,19 +165,19 @@ void *acc(void *ptr) {
         }
         
         if (strstr(msg, "<NAME>") != NULL) {
-            sscanf(msg, "<NAME>-%[^\r\n]", comment);
-            strcpy(handler->username, comment);
+            sscanf(msg, "<NAME>-%[^\r\n]", command);
+            strcpy(handler->username, command);
             broadcast_IP();
 
         } else if (strstr(msg, "<USER>") != NULL) {
-            sscanf(msg, "<USER>-%[^-]-%[^\r\n]", comment, msg_send);
-            if (strcmp(comment, "") == 0) {
+            sscanf(msg, "<USER>-%[^-]-%[^\r\n]", command, msg_send);
+            if (strcmp(command, "") == 0) {
                 sprintf(msg_send, "<REPL>-?\r\n");
                 
             } else {
-                sscanf(comment, "%s", msg_temp);
-                strcpy(comment, msg_temp);
-                dest = cek_user(comment);
+                sscanf(command, "%s", msg_temp);
+                strcpy(command, msg_temp);
+                dest = cek_user(command);
                 if (dest > -1) {
                     if (strcmp(msg_send, "") != 0) {
                         strcpy(msg_temp, "<FROM>-");
@@ -186,12 +190,12 @@ void *acc(void *ptr) {
                         strcpy(msg_send, "<SEND>\r\n");
                         
                     } else {
-                        sprintf(msg_send, "<REPL>-Message for NAME = %s ?\r\n", comment);
+                        sprintf(msg_send, "<REPL>-Message for NAME = %s ?\r\n", command);
                     
                     }
                     
                 } else {
-                    sprintf(msg_send, "<REPL>-User with NAME = %s not found\r\n", comment);
+                    sprintf(msg_send, "<REPL>-User with NAME = %s not found\r\n", command);
                     
                 }
             }
