@@ -43,16 +43,24 @@ void pop(int cli) {
     struct user *temp = awal;
     struct user *temp2 = awal->next;
     if (temp->data->sockcli == cli) {
-        awal = temp2;
+        if (awal->next == NULL)
+            awal = NULL;
+        else
+            awal = temp2;
     } else {
         do {
             if (temp2->data->sockcli == cli) {
-                temp->next = temp2->next;
+                if (temp2->next == NULL)
+                    temp->next = NULL;
+                else {
+                    temp->next = temp2->next;
+                    break;
+                }
             } else {
-                temp = temp->next;
+                temp = temp2;
                 temp2 = temp2->next;
             }
-        } while (temp2->next != NULL);
+        } while (temp->next != NULL);
     }
     return;
 }
@@ -97,12 +105,12 @@ void *broadcast(void *ptr) {
 }
 
 void broadcast_IP() {
-     // thread acc //
+    // thread acc //
     void *join;
-     
+    
     pthread_t broadcast_t;
     int broadcast_i;
-	pthread_mutex_t broadcast_m = PTHREAD_MUTEX_INITIALIZER;
+    pthread_mutex_t broadcast_m = PTHREAD_MUTEX_INITIALIZER;
     
     pthread_attr_t attr;
     pthread_attr_init(&attr);
