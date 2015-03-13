@@ -121,6 +121,36 @@ int push(haha *isi) {
     return 1;
 }
 
+void root_balancing(struct user **temp) {
+    struct user *temp2 = *temp;
+    if ((*temp)->left == NULL && (*temp)->right != NULL) {
+        if ((*temp)->right->left != NULL) {
+            temp2->right->left->left = (*temp);
+            temp2->right->left->right = (*temp)->right;
+            (*temp) = temp2->right->left;
+            (*temp)->left->right = NULL;
+            (*temp)->right->left = NULL;
+        } else if ((*temp)->right->right != NULL) {
+            temp2->left = (*temp);
+            (*temp) = temp2->right;
+            (*temp)->left->right = NULL;
+        }
+    } else if ((*temp)->right == NULL && (*temp)->left != NULL) {
+        if ((*temp)->left->right != NULL) {
+            temp2->left->right->right = (*temp);
+            temp2->left->right->left = (*temp)->left;
+            (*temp) = temp2->left->right;
+            (*temp)->right->left = NULL;
+            (*temp)->left->right = NULL;
+        } else if ((*temp)->left->left != NULL) {
+            temp2->right = (*temp);
+            (*temp) = temp2;
+            (*temp)->right->left = NULL;
+        }
+    }
+    return;
+}
+
 void pop(int cli, struct user **temp) {
     struct user *temp2;
     if ((*temp)->data->sockcli == cli) {
@@ -170,6 +200,7 @@ void pop(int cli, struct user **temp) {
                 (*temp)->right = temp2->right;
             }
         } else {
+            (*temp)->data = NULL;
             (*temp) = NULL;
         }
         height(&awal);
@@ -233,7 +264,6 @@ void send_who(int dest) {
 void *broadcast(void *ptr) {
     haha *handler = (haha *)ptr;
     send_who(handler->sockcli);
-    return;
 }
 
 void broadcast_IP(struct user *temp) {
@@ -350,7 +380,13 @@ void *acc(void *ptr) {
             strcpy(msg_send, "<BYE.>-:) Thank You....");
             write(handler->sockcli, msg_send, strlen(msg_send));
             fflush(stdout);
-            pop(handler->sockcli, &awal);
+            
+            if (awal->data->sockcli == handler->sockcli && awal->left == NULL && awal->right == NULL) {
+                awal = NULL;
+            } else {
+                pop(handler->sockcli, &awal);
+                root_balancing(&awal);
+            }
             break;
             
         } else {
@@ -364,9 +400,10 @@ void *acc(void *ptr) {
     
     close(handler->sockcli);
     
-    broadcast_IP(awal);
+    free(handler);
     
-    return;
+    if (awal != NULL)
+        broadcast_IP(awal);
 }
 
 void main()
@@ -449,6 +486,8 @@ void main()
         
         pthread_mutex_unlock( &acc_m );
     }
-    close(sockfd);           
+    
+    close(sockfd);
+    return;      
 }
  
