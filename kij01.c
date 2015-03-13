@@ -16,64 +16,203 @@ typedef struct haha {
 } haha;
 
 struct user {
+    int weight;
     haha *data;
-    struct user *next;
+    struct user *left,
+                *right;
 };
 
 struct user *awal;
 
-void push(haha *isi) {
+int height(struct user **temp) {
+    int kiri = 0, kanan = 0, nilai = 0;
+    if ((*temp)->left != NULL) {
+        kiri += height(&(*temp)->left);
+        if (kiri - 1 == 0)
+            kiri = -2;
+        else
+            kiri -= 1;
+    }
+    if ((*temp)->right != NULL) {
+        kanan += height(&(*temp)->right);
+        if (kanan + 1 == 0)
+            kanan = 2;
+        else
+            kanan += 1;
+    }
+    
+    nilai = kiri + kanan;
+        
+    if (nilai == -2) {
+        struct user *temp2 = (*temp);
+        if (temp2->left->weight == -1) {
+            temp2->left->right = (*temp);
+            (*temp) = temp2->left;
+            (*temp)->right->left = NULL;
+        }
+        else {
+            temp2->left->right->right = (*temp);
+            temp2->left->right->left = (*temp)->left;
+            (*temp) = temp2->left->right;
+            (*temp)->left->right = NULL;
+            (*temp)->right->left = NULL;
+        }
+        (*temp)->left->weight = 0;
+        (*temp)->right->weight = 0;
+        nilai = 0;
+    }
+    if (nilai == 2) {
+        struct user *temp2 = (*temp);
+        if (temp2->right->weight == 1) {
+            temp2->right->left = (*temp);
+            (*temp) = temp2->right;
+            (*temp)->left->right = NULL;
+        }
+        else {
+            temp2->right->left->left = (*temp);
+            temp2->right->left->right = (*temp)->right;
+            (*temp) = temp2->right->left;
+            (*temp)->right->left = NULL;
+            (*temp)->left->right = NULL;
+        }
+        (*temp)->right->weight = 0;
+        (*temp)->left->weight = 0;
+        nilai = 0;
+    }
+    
+    (*temp)->weight = nilai;
+    return nilai;
+}
+
+int push(haha *isi) {
     struct user *baru = (struct user*) malloc (sizeof(struct user));
+    baru->weight = 0;
     baru->data = isi;
-    baru->next = NULL;
+    baru->left = NULL;
+    baru->right = NULL;
     
     if (awal == NULL) {
         awal = baru;
     } else {
         struct user *temp = awal;
-        while (temp->next != NULL) {
-            temp = temp->next;
-        }
-        temp->next = baru;
-    }
-    return;
-}
-
-void pop(int cli) {
-    struct user *temp = awal;
-    struct user *temp2 = awal->next;
-    if (temp->data->sockcli == cli) {
-        if (awal->next == NULL)
-            awal = NULL;
-        else
-            awal = temp2;
-    } else {
-        do {
-            if (temp2->data->sockcli == cli) {
-                if (temp2->next == NULL)
-                    temp->next = NULL;
+        while (1) {
+            if (strcmp(temp->data->username, isi->username) > 0) {
+                if (temp->left != NULL) {
+                    temp = temp->left;
+                }
                 else {
-                    temp->next = temp2->next;
+                    temp->left = baru;
                     break;
                 }
+            } else if (strcmp(temp->data->username, isi->username) < 0) {
+                if (temp->right != NULL) {
+                    temp = temp->right;
+                }
+                else {
+                     temp->right = baru;
+                     break;
+                }
             } else {
-                temp = temp2;
-                temp2 = temp2->next;
+                return -1;
             }
-        } while (temp->next != NULL);
+        }
+    }
+    height(&awal);
+    return 1;
+}
+
+void pop(int cli, struct user **temp) {
+    struct user *temp2;
+    if ((*temp)->data->sockcli == cli) {
+        if ((*temp)->left != NULL && (*temp)->right != NULL) {
+            temp2 = (*temp)->left;
+            if (temp2->right != NULL) {
+                while (temp2->right->right != NULL) {
+                    temp2 = temp2->right;
+                }
+                (*temp)->data = temp2->right->data;
+                temp2->right = temp2->right->left;
+            } else {
+                temp2 = (*temp)->right;
+                if (temp2->left != NULL) {
+                    while (temp2->left->left != NULL) {
+                        temp2 = temp2->left;
+                    }
+                    (*temp)->data = temp2->left->data;
+                    temp2->left = temp2->left->right;
+                } else {
+                    (*temp)->data = temp2->data;
+                    (*temp)->right = temp2->right;
+                }
+            }
+        } else if ((*temp)->left != NULL) {
+            temp2 = (*temp)->left;
+            if (temp2->right != NULL) {
+                while (temp2->right->right != NULL) {
+                    temp2 = temp2->right;
+                }
+                (*temp)->data = temp2->right->data;
+                temp2->right = temp2->right->left;
+            } else {
+                (*temp)->data = temp2->data;
+                (*temp)->left = temp2->left;
+            }
+        } else if ((*temp)->right != NULL) {
+            temp2 = (*temp)->right;
+            if (temp2->left != NULL) {
+                while (temp2->left->left != NULL) {
+                    temp2 = temp2->left;
+                }
+                (*temp)->data = temp2->left->data;
+                temp2->left = temp2->left->right;
+            } else {
+                (*temp)->data = temp2->data;
+                (*temp)->right = temp2->right;
+            }
+        } else {
+            (*temp) = NULL;
+        }
+        height(&awal);
+        return;
+    } else {
+        if ((*temp)->left != NULL)
+            pop(cli, &(*temp)->left);
+        if ((*temp)->right != NULL)
+            pop(cli, &(*temp)->right);
     }
     return;
 }
 
-int cek_user(char *msg) {
-    struct user *temp = awal;
-    do {
-       if (strcmp(temp->data->username, msg) == 0) {
-           return temp->data->sockcli;
-       }
-       temp = temp->next;
-    } while (temp != NULL);
-    return -1;
+int cek_user(char *msg, struct user *temp) {
+    int a = -1, b = -1;
+    if (temp->left != NULL)
+        a = cek_user(msg, temp->left);
+        
+    if (strcmp(temp->data->username, msg) == 0)
+        return temp->data->sockcli;
+    
+    if (temp->right != NULL) 
+        b = cek_user(msg, temp->right);
+    
+    return a >= b ? a : b ;
+}
+
+void send_who_msg(int dest, struct user *temp, int depth) {
+    char msg_temp[128];
+    bzero(msg_temp, 128);
+    if (temp->left != NULL)
+        send_who_msg(dest, temp->left, depth+1);
+    
+    if (temp != NULL) {
+        strcpy(msg_temp, "-");
+        strcat(msg_temp, temp->data->username);
+        write(dest, msg_temp, strlen(msg_temp));
+        fflush(stdout);
+    }
+    
+    if (temp->right != NULL)
+        send_who_msg(dest, temp->right, depth+1);
+    return;
 }
 
 void send_who(int dest) {
@@ -83,14 +222,7 @@ void send_who(int dest) {
     write(dest, msg_temp, strlen(msg_temp));
     fflush(stdout);
     
-    struct user *temp = awal;
-    do {
-        strcpy(msg_temp, "-");
-        strcat(msg_temp, temp->data->username);
-        write(dest, msg_temp, strlen(msg_temp));
-        fflush(stdout);
-        temp = temp->next;
-    } while (temp != NULL);
+    send_who_msg(dest, awal, 0);
     
     strcpy(msg_temp, "\r\n");
     write(dest, msg_temp, strlen(msg_temp));
@@ -104,7 +236,7 @@ void *broadcast(void *ptr) {
     return;
 }
 
-void broadcast_IP() {
+void broadcast_IP(struct user *temp) {
     // thread acc //
     void *join;
     
@@ -118,26 +250,27 @@ void broadcast_IP() {
     
     haha *handler = (haha *) malloc( sizeof ( haha ) );
     
-    struct user *temp = awal;
-    while (temp != NULL) {
-        handler->sockcli = temp->data->sockcli;
-        
-        pthread_mutex_lock( &broadcast_m );
-        
-        broadcast_i = pthread_create( &broadcast_t, &attr, broadcast, (void *)handler);
-        
-        pthread_mutex_unlock( &broadcast_m );
-        
-        pthread_join(broadcast_t, &join);
-        
-        temp = temp->next;
-    }
+    handler->sockcli = temp->data->sockcli;
+    
+    pthread_mutex_lock( &broadcast_m );
+    
+    broadcast_i = pthread_create( &broadcast_t, &attr, broadcast, (void *)handler);
+    
+    pthread_mutex_unlock( &broadcast_m );
+    
+    if (temp->left != NULL)
+        broadcast_IP(temp->left);
+    
+    if (temp->right != NULL)
+        broadcast_IP(temp->right);
+    
     return;
 }
 
+
 void *acc(void *ptr) {
     char version[128];
-    strcpy(version, "0.0.1e beta");
+    strcpy(version, "0.0.1f beta");
 
     haha *handler = (haha *)ptr;
     
@@ -175,7 +308,8 @@ void *acc(void *ptr) {
         if (strstr(msg, "<NAME>") != NULL) {
             sscanf(msg, "<NAME>-%[^\r\n]", command);
             strcpy(handler->username, command);
-            broadcast_IP();
+            push(handler);
+            broadcast_IP(awal);
 
         } else if (strstr(msg, "<USER>") != NULL) {
             sscanf(msg, "<USER>-%[^-]-%[^\r\n]", command, msg_send);
@@ -185,7 +319,7 @@ void *acc(void *ptr) {
             } else {
                 sscanf(command, "%s", msg_temp);
                 strcpy(command, msg_temp);
-                dest = cek_user(command);
+                dest = cek_user(command, awal);
                 if (dest > -1) {
                     if (strcmp(msg_send, "") != 0) {
                         strcpy(msg_temp, "<FROM>-");
@@ -216,7 +350,7 @@ void *acc(void *ptr) {
             strcpy(msg_send, "<BYE.>-:) Thank You....");
             write(handler->sockcli, msg_send, strlen(msg_send));
             fflush(stdout);
-            pop(handler->sockcli);
+            pop(handler->sockcli, &awal);
             break;
             
         } else {
@@ -230,9 +364,7 @@ void *acc(void *ptr) {
     
     close(handler->sockcli);
     
-    free(handler);
-    
-    broadcast_IP();
+    broadcast_IP(awal);
     
     return;
 }
@@ -310,8 +442,6 @@ void main()
         handler->sockcli = sockcli;
         printf("%d\n", handler->sockcli);
         strcpy(handler->username, "anonymous");
-        
-        push(handler);
         
         pthread_mutex_lock( &acc_m );
         
