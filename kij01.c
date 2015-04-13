@@ -333,6 +333,7 @@ int upload(char *name, int sockcli, char *dir_now, char *length) {
     strcat(str_name, ".pu.key");
     
     int len = atoi(length);
+    //printf("%d", len);
     
     fd = open(str_name, O_WRONLY | O_CREAT, 0755);
     
@@ -386,7 +387,7 @@ int del(char *name, char *dir_now) {
 
 void *acc(void *ptr) {
     char version[128];
-    strcpy(version, "0.0.1f beta");
+    strcpy(version, "0.0.2 beta");
 
     haha *handler = (haha *)ptr;
     
@@ -497,6 +498,8 @@ void *acc(void *ptr) {
             write(handler->sockcli, msg_send, strlen(msg_send));
             fflush(stdout);
             
+            del(handler->username, dir_now);
+            
             if (awal->data->sockcli == handler->sockcli && awal->left == NULL && awal->right == NULL) {
                 awal = NULL;
             } else {
@@ -602,7 +605,6 @@ void main()
         
         pthread_mutex_unlock( &acc_m );
     }
-    printf("What now?");
     
     close(sockfd);
     return;      
