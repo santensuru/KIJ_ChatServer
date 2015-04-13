@@ -8,6 +8,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <sys/stat.h>
 
 typedef struct haha {
     int sockcli;
@@ -297,6 +299,90 @@ void broadcast_IP(struct user *temp) {
     return;
 }
 
+int download(char *name, int sockcli, char *dir_now) {
+    int fd, buf_size;
+    char buf[4096];
+    char str_name[128];
+    strcpy(str_name, dir_now);
+    strcat(str_name, name);
+    strcat(str_name, ".pu.key");
+    
+    fd = open(str_name, O_RDONLY);
+    
+    if (fd < 0)
+        return -1;
+
+    do {
+        /* binaries */
+        buf_size = read(fd, &buf[0], 4096);
+        if (buf_size > 0) {
+            int s = write(sockcli, &buf[0], buf_size);
+        }
+    } while (buf_size > 0);
+
+    close(fd);
+    return 3;
+}
+
+int upload(char *name, int sockcli, char *dir_now, char *length) {
+    int fd, buf_size;
+    char new_buf[1024];
+    char str_name[128];
+    strcpy(str_name, dir_now);
+    strcat(str_name, name);
+    strcat(str_name, ".pu.key");
+    
+    int len = atoi(length);
+    
+    fd = open(str_name, O_WRONLY | O_CREAT, 0755);
+    
+    if (fd < 0)
+        return -1;
+        
+    int retval, tot=0;
+    do {
+        fflush(stdin);
+        /* binaries */
+        retval = read(sockcli, new_buf, 1024);
+        tot += retval;
+        write(fd, &new_buf[0], retval);
+    } while (tot < len);
+
+    close(fd);
+    return 3;
+}
+
+int get_size_file(char *name, char *dir_now) {
+    int fd;
+    char str_name[128];
+    strcpy(str_name, dir_now);
+    strcat(str_name, name);
+    strcat(str_name, ".pu.key");
+    
+    fd = open(str_name, O_RDONLY);
+    
+    if (fd < 0)
+        return -1;
+    
+    struct stat st;
+    
+    // stat() returns -1 on error. Skipping check in this example
+    stat(str_name, &st);
+
+    close(fd);
+    return st.st_size;
+}
+
+int del(char *name, char *dir_now) {
+    char str_name[128];
+    strcpy(str_name, dir_now);
+    strcat(str_name, name);
+    strcat(str_name, ".pu.key");
+    int s = remove(str_name);
+    if (s < 0)
+        return -1;
+    return 3;
+}
 
 void *acc(void *ptr) {
     char version[128];
@@ -309,6 +395,8 @@ void *acc(void *ptr) {
     
     char buf[2], msg[4096], command[128], msg_temp[4096], msg_send[4096];
     int dest = -1;
+    
+    char dir_now[1024] = "/home/user/coba/KIJ/";
     
     /* here */
     
@@ -371,6 +459,34 @@ void *acc(void *ptr) {
                     
                 }
             }
+            
+        } else if (strstr(msg, "<STOR>") != NULL) {
+            sscanf(msg, "<STOR>-%[^\r\n]", command);
+            if ( upload(handler->username, handler->sockcli, dir_now, command) == 3 ) {
+                strcpy(msg_send, "\r\n");
+            } else {
+                strcpy(msg_send, "<ERRO>\r\n");
+            }
+            
+        } else if (strstr(msg, "<RETR>") != NULL) {
+            sscanf(msg, "<RETR>-%[^\r\n]", command);
+            dest = cek_user(command, awal);
+            int len = get_size_file(command, dir_now);
+            sprintf(msg_send, "<LENG>-%d\r\n", len);
+            write(handler->sockcli, msg_send, strlen(msg_send));
+            fflush(stdout);
+            strcpy(msg_send, "");
+            
+            if (dest > -1) {
+                if ( download(handler->username, handler->sockcli, dir_now) == 3 ) {
+                    strcpy(msg_send, "\r\n");
+                } else {
+                    strcpy(msg_send, "<ERRO>\r\n");
+                }
+            }
+        
+        } else if (strstr(msg, "<DONE>") != NULL) {
+            /* do nothong */
             
         } else if (strstr(msg, "<WHO?>") != NULL) {
             send_who(handler->sockcli);
@@ -486,6 +602,7 @@ void main()
         
         pthread_mutex_unlock( &acc_m );
     }
+    printf("What now?");
     
     close(sockfd);
     return;      
