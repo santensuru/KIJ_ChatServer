@@ -332,7 +332,7 @@ int upload(char *name, int sockcli, char *dir_now, char *length) {
     strcat(str_name, name);
     strcat(str_name, ".pu.key");
     
-    int len = atoi(length);
+    //int len = atoi(length);
     //printf("%d", len);
     
     fd = open(str_name, O_WRONLY | O_CREAT, 0755);
@@ -340,14 +340,14 @@ int upload(char *name, int sockcli, char *dir_now, char *length) {
     if (fd < 0)
         return -1;
         
-    int retval, tot=0;
+    int retval;//, tot=0;
     do {
         fflush(stdin);
         /* binaries */
         retval = read(sockcli, new_buf, 1024);
-        tot += retval;
+        //tot += retval;
         write(fd, &new_buf[0], retval);
-    } while (tot < len);
+    } while (retval == 1024);
 
     close(fd);
     return 3;
@@ -397,7 +397,7 @@ void *acc(void *ptr) {
     char buf[2], msg[4096], command[128], msg_temp[4096], msg_send[4096];
     int dest = -1;
     
-    char dir_now[1024] = "/home/user/coba/KIJ/";
+    char dir_now[1024] = "/home/";
     
     /* here */
     
@@ -423,6 +423,8 @@ void *acc(void *ptr) {
                 msg[i] = msg[i] - 'a' + 'A';
             }
         }
+
+        printf("%s\n", msg);
         
         if (strstr(msg, "<NAME>") != NULL) {
             sscanf(msg, "<NAME>-%[^\r\n]", command);
@@ -463,23 +465,26 @@ void *acc(void *ptr) {
             
         } else if (strstr(msg, "<STOR>") != NULL) {
             sscanf(msg, "<STOR>-%[^\r\n]", command);
+            //printf("%s\r\n", command);
             if ( upload(handler->username, handler->sockcli, dir_now, command) == 3 ) {
-                strcpy(msg_send, "\r\n");
+                strcpy(msg_send, "<COOK>\r\n");
             } else {
                 strcpy(msg_send, "<ERRO>\r\n");
             }
             
         } else if (strstr(msg, "<RETR>") != NULL) {
+            //printf("WUT\n", command);
             sscanf(msg, "<RETR>-%[^\r\n]", command);
+            //printf("%s\n", command);
             dest = cek_user(command, awal);
             int len = get_size_file(command, dir_now);
-            sprintf(msg_send, "<LENG>-%d\r\n", len);
+            sprintf(msg_send, "<LENG>-:%d:\r\n", len);
             write(handler->sockcli, msg_send, strlen(msg_send));
             fflush(stdout);
             strcpy(msg_send, "");
             
             if (dest > -1) {
-                if ( download(handler->username, handler->sockcli, dir_now) == 3 ) {
+                if ( download(command, handler->sockcli, dir_now) == 3 ) {
                     strcpy(msg_send, "\r\n");
                 } else {
                     strcpy(msg_send, "<ERRO>\r\n");
