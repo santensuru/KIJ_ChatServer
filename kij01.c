@@ -333,7 +333,6 @@ int upload(char *name, int sockcli, char *dir_now, char *length) {
     strcat(str_name, ".pu.key");
     
     int len = atoi(length);
-    //printf("%d", len);
     
     fd = open(str_name, O_WRONLY | O_CREAT, 0755);
     
@@ -347,7 +346,7 @@ int upload(char *name, int sockcli, char *dir_now, char *length) {
         retval = read(sockcli, new_buf, 1024);
         tot += retval;
         write(fd, &new_buf[0], retval);
-    } while (tot < len);
+    } while (retval == 1024 && tot < len);
 
     close(fd);
     return 3;
@@ -462,7 +461,7 @@ void *acc(void *ptr) {
             }
             
         } else if (strstr(msg, "<STOR>") != NULL) {
-            sscanf(msg, "<STOR>-%[^\r\n]", command);
+            sscanf(msg, "<STOR>-:%[^:\r\n]", command);
             if ( upload(handler->username, handler->sockcli, dir_now, command) == 3 ) {
                 strcpy(msg_send, "\r\n");
             } else {
@@ -479,7 +478,7 @@ void *acc(void *ptr) {
             strcpy(msg_send, "");
             
             if (dest > -1) {
-                if ( download(handler->username, handler->sockcli, dir_now) == 3 ) {
+                if ( download(command, handler->sockcli, dir_now) == 3 ) {
                     strcpy(msg_send, "\r\n");
                 } else {
                     strcpy(msg_send, "<ERRO>\r\n");
